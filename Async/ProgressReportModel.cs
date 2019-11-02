@@ -8,6 +8,6 @@ namespace Async
     {
         public int PercentComplete { get; set; }
 
-        public List<string> Downloaded { get; set; } = new List<string>();
+        public List<string> Downloaded { get; } = new List<string>();
     }
 }

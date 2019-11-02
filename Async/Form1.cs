@@ -51,7 +51,7 @@ namespace Async
             {
                 var sw = new Stopwatch();
                 sw.Start();
-                var s =await GetAsync(url);
+                var s =await GetAsync(url).ConfigureAwait(true);
                 var ms = sw.ElapsedMilliseconds;
                 sw.Stop();
                 textBox1.Text += ($"{ms}:MS { Environment.NewLine}");
@@ -64,15 +64,16 @@ namespace Async
         private async void GetAsyncParralel_Click(object sender, EventArgs e)
         {
             Progress<ProgressReportModel> P = new Progress<ProgressReportModel>();
-            P.ProgressChanged += ReportProg;
+          
+
             var sw = new Stopwatch();
             sw.Start();
-            var results = await RunDownload(P);
+            _ = await RunDownload(P).ConfigureAwait(true);
 
 
         }
 
-        private void ReportProg(object sender, ProgressReportModel e)
+        private void ReportProg(ProgressReportModel e)
         {
             progressBar1.Value = e.PercentComplete;
         }
@@ -81,18 +82,21 @@ namespace Async
         {
             var tlist = new List<Task>();
             ProgressReportModel P = new ProgressReportModel();
-
             var urlList = MakeList();
             for (int i = 0; i < urlList.Count; i++)
             {
                 tlist.Add(GetAsync(urlList[i]));
                 P.Downloaded.Add(urlList[i]);
                 P.PercentComplete=(P.Downloaded.Count * 100) / urlList.Count;
-                progress.Report(P);
+                if (progress != null)
+                {
+                    progress.Report(P);
+                }
+                ReportProg(P);
             }
             var sw = new Stopwatch();
             sw.Start();
-            await Task.WhenAll(tlist);
+            await Task.WhenAll(tlist).ConfigureAwait(true);
             var ms = sw.ElapsedMilliseconds;
             sw.Stop();
             textBox1.Text += ($"{ms}:MS { Environment.NewLine}");
@@ -104,9 +108,9 @@ namespace Async
 
         static  string Get(string url)
         {
-            
+            Uri uri = new UriBuilder(url).Uri;
             string content = "";
-            HttpWebRequest request = WebRequest.CreateHttp(url);
+            HttpWebRequest request = WebRequest.CreateHttp(uri);
             request.Method = "GET"; // or "POST", "PUT", "PATCH", "DELETE", etc.
             using (HttpWebResponse response = (HttpWebResponse)request.GetResponse())
             {
@@ -123,12 +127,15 @@ namespace Async
         }
         static async Task<string> GetAsync(string url)
         {
-            var httpClient = new HttpClient();
-            var response = await httpClient.GetAsync(url);
+            Uri uri = new UriBuilder(url).Uri;
+            using var httpClient = new HttpClient();
+            var response = await httpClient.GetAsync(uri).ConfigureAwait(false);
             //will throw an exception if not successful
             response.EnsureSuccessStatusCode();
-            string content = await response.Content.ReadAsStringAsync();
+            string content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
             return content;
+
+
         }
 
         static List<string> MakeList()
